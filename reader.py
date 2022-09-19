@@ -2,9 +2,8 @@ import os
 from typing import Dict
 import waveplus as wp
 
-SerialNumber = os.environ["AIRTHINGS_SERIALNUMBER"]
-
 def read_values() -> Dict[str, float]:
+    SerialNumber = int(os.environ["AIRTHINGS_SERIALNUMBER"])
 
     waveplus = wp.WavePlus(SerialNumber)
     try:
