@@ -3,11 +3,12 @@ from typing import Dict
 import waveplus as wp
 
 def read_values() -> Dict[str, float]:
-    SerialNumber = int(os.environ["AIRTHINGS_SERIALNUMBER"])
+    serial_number = int(os.environ["AIRTHINGS_SERIALNUMBER"])
+    mac_addr = os.environ["AIRTHINGS_MAC_ADDRESS"]
 
-    waveplus = wp.WavePlus(SerialNumber)
+    waveplus = wp.WavePlus(SerialNumber=serial_number, MacAddr=mac_addr)
     try:
-        waveplus.connect()
+        waveplus.search_and_connect()
 
         # read values
         sensors = waveplus.read()

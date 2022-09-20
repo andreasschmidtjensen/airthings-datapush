@@ -1,5 +1,6 @@
-from bluepy.btle import UUID, Peripheral, Scanner, DefaultDelegate
 import struct
+import sys
+from bluepy.btle import UUID, Peripheral, Scanner, DefaultDelegate
 
 # ====================================
 # Utility functions for WavePlus class
@@ -26,29 +27,42 @@ def parseSerialNumber(ManuDataHexStr):
 
 class WavePlus():
 
-
-
-    def __init__(self, SerialNumber):
+    def __init__(self, SerialNumber: int = None, MacAddr: str = None):
         self.periph        = None
         self.curr_val_char = None
-        self.MacAddr       = None
+        self.MacAddr       = MacAddr
         self.SN            = SerialNumber
         self.uuid          = UUID("b42e2a68-ade7-11e4-89d3-123b93f75cba")
 
+    @staticmethod
+    def find_mac_from_serialnumber(serial_number: str, search_count: int = 50):
+        print(f"- searching for Airthing with serialnumber {SN}")
+        scanner = Scanner().withDelegate(DefaultDelegate())
+        iteration = 0
+        while iteration < search_count:
+            devices      = scanner.scan(0.1) # 0.1 seconds scan period
+            iteration += 1
+            for dev in devices:
+                ManuData = dev.getValueText(255)
+                SN = parseSerialNumber(ManuData)
+                if (SN == serial_number):
+                    print(f"- found Airthing with serialnumber {SN}: {dev.addr}")
+                    return dev.addr
+
+        return None
+
     def connect(self):
+        if (self.periph is None):
+            print(f"- connecting to {self.MacAddr}")
+            self.periph = Peripheral(self.MacAddr)
+        
+        if (self.curr_val_char is None):
+            self.curr_val_char = self.periph.getCharacteristics(uuid=self.uuid)[0]
+
+    def search_and_connect(self):
         # Auto-discover device on first connection
         if (self.MacAddr is None):
-            scanner     = Scanner().withDelegate(DefaultDelegate())
-            searchCount = 0
-            while self.MacAddr is None and searchCount < 50:
-                devices      = scanner.scan(0.1) # 0.1 seconds scan period
-                searchCount += 1
-                for dev in devices:
-                    ManuData = dev.getValueText(255)
-                    SN = parseSerialNumber(ManuData)
-                    if (SN == self.SN):
-                        self.MacAddr = dev.addr # exits the while loop on next conditional check
-                        break # exit for loop
+            self.MacAddr = WavePlus.find_mac_from_serialnumber(self.SN)
 
             if (self.MacAddr is None):
                 print("ERROR: Could not find device.")
@@ -58,10 +72,7 @@ class WavePlus():
                 sys.exit(1)
 
         # Connect to device
-        if (self.periph is None):
-            self.periph = Peripheral(self.MacAddr)
-        if (self.curr_val_char is None):
-            self.curr_val_char = self.periph.getCharacteristics(uuid=self.uuid)[0]
+        self.connect()
 
     def read(self):
         if (self.curr_val_char is None):
